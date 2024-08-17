@@ -1,0 +1,1 @@
+az group delete --resource-group MyResourceGroup3
