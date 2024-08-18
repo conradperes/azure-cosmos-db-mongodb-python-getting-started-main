@@ -5,94 +5,119 @@ import json
 import os
 import azure.functions as func
 
-app = func.FunctionApp()
+# Configurações do Blob Storage
+connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+container_name = 'conradcontainer'
+blob_name = 'part-r-00000-f5c243b9-a015-4a3b-a4a8-eca00f80f04c.json'
 
-@app.function_name(name="HttpTriggerFunction")
-@app.route(route="httptrigger", methods=["GET", "POST"])
+# Configurações do Cosmos DB
+CONNECTION_STRING = os.getenv("AZURE_COSMOS_CONNECTION_STRING")
+DB_NAME = "api-mongodb-sample-database"
+UNSHARDED_COLLECTION_NAME = "unsharded-sample-collection"
+
+# Função para ler o JSON de uma string
+def read_json_string(json_string):
+    """Read JSON string and return its contents as a list of dictionaries"""
+    try:
+        data = [json.loads(line.strip()) for line in json_string.splitlines()]
+        return data
+    except json.JSONDecodeError as e:
+        logging.error(f"Error decoding JSON: {e}")
+        raise e
+
+# Função para baixar o blob do Azure Blob Storage e processar os dados na memória
+def download_blob_storage(blob_service_client, container_name, blob_name):
+    """Download the JSON file from Blob Storage and return its content as an array"""
+    try:
+        blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
+        blob_data = blob_client.download_blob().readall().decode('utf-8')
+        logging.info("Blob baixado com sucesso!")
+        return read_json_string(blob_data)
+    except Exception as e:
+        logging.error(f"Erro ao baixar o blob: {e}")
+        return []
+
+# Função para criar o banco de dados e a coleção
+def create_database_unsharded_collection(client):
+    """Create sample database with shared throughput if it doesn't exist and an unsharded collection"""
+    db = client[DB_NAME]
+
+    # Verifique coleções existentes
+    logging.info(f"Coleções disponíveis no DB: {db.list_collection_names()}")
+
+    # Create database if it doesn't exist
+    if DB_NAME not in client.list_database_names():
+        db.command({'customAction': "CreateDatabase", 'offerThroughput': 400})
+        logging.info(f"Created db {DB_NAME} with shared throughput")
+
+    # Create collection if it doesn't exist
+    if UNSHARDED_COLLECTION_NAME not in db.list_collection_names():
+        db.command({'customAction': "CreateCollection", 'collection': UNSHARDED_COLLECTION_NAME})
+        logging.info(f"Created collection {UNSHARDED_COLLECTION_NAME}")
+
+    return db[UNSHARDED_COLLECTION_NAME]
+
+# Função para salvar documentos na coleção
+def save_documents(collection, documents):
+    """Save a list of documents to the collection"""
+    for document in documents:
+        # Verifique se o documento já existe na coleção
+        if collection.find_one({"lab": document["lab"], "color": document["color"], "value1": document["value1"], "value2": document["value2"]}):
+            logging.info(f"Documento já existe: {document}")
+        else:
+            collection.insert_one(document)
+            logging.info(f"Documento inserido: {document}")
+    logging.info(f"Processamento de {len(documents)} documentos concluído.")
+
+# Função principal
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
 
-    # Configurações do Blob Storage
-    connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
-    blob_service_client = BlobServiceClient.from_connection_string(connection_string)
-    container_name = 'conradcontainer'
-    blob_name = '2015-summary.json'
-
-    # Configurações do Cosmos DB
-    CONNECTION_STRING = os.getenv("AZURE_COSMOS_CONNECTION_STRING")
-    logging.info(f"Azure Storage Connection String: {connection_string}")
-    logging.info(f"Cosmos DB Connection String: {CONNECTION_STRING}")
-    DB_NAME = "api-mongodb-sample-database"
-    UNSHARDED_COLLECTION_NAME = "unsharded-sample-collection"
-    SAMPLE_FIELD_NAME = "sample_field"
-
-    # Função para ler o JSON de um arquivo
-    def read_json_file(file_path):
-        with open(file_path, 'r') as file:
-            data = []
-            for line in file:
-                try:
-                    data.append(json.loads(line.strip()))
-                except json.JSONDecodeError as e:
-                    logging.error(f"Error decoding JSON on line: {line.strip()}")
-                    raise e
-        return data
-
-    # Função para baixar o blob do Azure Blob Storage
-    def download_blob_storage(blob_service_client, container_name, blob_name):
-        try:
-            blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
-            with open("/tmp/downloaded.json", "wb") as download_file:
-                download_file.write(blob_client.download_blob().readall())
-            logging.info("Blob baixado com sucesso!")
-            return read_json_file("/tmp/downloaded.json")
-        except Exception as e:
-            logging.error(f"Erro ao baixar o blob: {e}")
-            return []
-
-    # Função para criar o banco de dados e a coleção
-    def create_database_unsharded_collection(client):
-        db = client[DB_NAME]
-        if DB_NAME not in client.list_database_names():
-            db.command({'customAction': "CreateDatabase", 'offerThroughput': 400})
-            logging.info("Created db {} with shared throughput".format(DB_NAME))
-
-        if UNSHARDED_COLLECTION_NAME not in db.list_collection_names():
-            db.command({'customAction': "CreateCollection", 'collection': UNSHARDED_COLLECTION_NAME})
-            logging.info("Created collection {}".format(UNSHARDED_COLLECTION_NAME))
-        return db[UNSHARDED_COLLECTION_NAME]
-
-    import time
-
-    def save_documents(collection, documents):
-        for document in documents:
-            retries = 5
-            while retries > 0:
-                try:
-                    collection.insert_one(document)
-                    logging.info("Inserted document: %s", document)
-                    break
-                except pymongo.errors.WriteError as e:
-                    if e.code == 16500:  # TooManyRequests (429)
-                        retries -= 1
-                        wait_time = int(e.details.get("RetryAfterMs", 1000)) / 1000
-                        logging.warning(f"TooManyRequests error, retrying in {wait_time} seconds...")
-                        time.sleep(wait_time)
-                    else:
-                        logging.error(f"Failed to insert document: {document} with error: {e}")
-                        raise e
-            if retries == 0:
-                logging.error(f"Failed to insert document after retries: {document}")
-        logging.info("Saved {} documents to the collection".format(len(documents)))
-
-    client = pymongo.MongoClient(CONNECTION_STRING)
     try:
-        client.server_info()
-    except pymongo.errors.ServerSelectionTimeoutError:
-        raise TimeoutError("Invalid API for MongoDB connection string or timed out when attempting to connect")
+        blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+        logging.info("Conexão ao Blob Storage estabelecida com sucesso.")
+    except Exception as e:
+        logging.error(f"Erro ao conectar ao Blob Storage: {e}")
+        return func.HttpResponse("Erro ao conectar ao Blob Storage", status_code=500)
 
-    documents = download_blob_storage(blob_service_client, container_name, blob_name)
-    collection = create_database_unsharded_collection(client)
-    save_documents(collection, documents)
-    
+    if not CONNECTION_STRING:
+        logging.error("A string de conexão do Cosmos DB não foi encontrada nas variáveis de ambiente.")
+        return func.HttpResponse("Erro: A string de conexão do Cosmos DB não foi encontrada.", status_code=500)
+
+    logging.info("Cosmos DB Connection String encontrada.")
+
+    try:
+        client = pymongo.MongoClient(CONNECTION_STRING)
+        logging.info("Tentando se conectar ao Cosmos DB...")
+        client.server_info()  # Isso irá lançar uma exceção se a conexão falhar
+        logging.info("Conexão ao Cosmos DB estabelecida com sucesso.")
+
+        # Download do blob e leitura dos documentos
+        documents = download_blob_storage(blob_service_client, container_name, blob_name)
+        logging.info(f"Documentos lidos: {documents}")
+
+        # Criar a coleção no Cosmos DB
+        collection = create_database_unsharded_collection(client)
+
+        # Salvar os documentos na coleção
+        save_documents(collection, documents)
+    except pymongo.errors.OperationFailure as e:
+        logging.error(f"Falha na operação do MongoDB: {e}")
+        return func.HttpResponse(f"Erro ao conectar ao Cosmos DB: {e}", status_code=500)
+    except pymongo.errors.ServerSelectionTimeoutError as e:
+        logging.error(f"Erro ao conectar ao servidor do MongoDB: {e}")
+        return func.HttpResponse("Erro ao conectar ao servidor do Cosmos DB", status_code=500)
+    except Exception as e:
+        logging.error(f"Erro desconhecido ao conectar ao Cosmos DB: {e}")
+        return func.HttpResponse(f"Erro desconhecido: {e}", status_code=500)
+
     return func.HttpResponse("Dados inseridos com sucesso no Cosmos DB", status_code=200)
+
+# Registro do Trigger HTTP
+app = func.FunctionApp()
+
+@app.function_name(name="MyFunction")
+@app.route(route="MyFunction", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS)
+def MyFunction(req: func.HttpRequest) -> func.HttpResponse:
+    return main(req)
