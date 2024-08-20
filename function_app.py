@@ -14,7 +14,7 @@ blob_name = 'part-r-00000-f5c243b9-a015-4a3b-a4a8-eca00f80f04c.json'
 # Configurações do Cosmos DB
 CONNECTION_STRING = os.getenv("AZURE_COSMOS_CONNECTION_STRING")
 DB_NAME = "api-mongodb-sample-database"
-UNSHARDED_COLLECTION_NAME = "unsharded-sample-collection"
+UNSHARDED_COLLECTION_NAME = "classification-colors-ml-collection"
 
 # Função para ler o JSON de uma string
 def read_json_string(json_string):
