@@ -1,95 +1,125 @@
-Este projeto fornece um guia de início rápido para a integração de um aplicativo Python com o Azure Cosmos DB usando a API MongoDB. Ele também demonstra a criação e publicação de uma Azure Function que interage com o Cosmos DB.
+This project provides a quick start guide for integrating a Python application with Azure Cosmos DB using the MongoDB API. It also demonstrates the creation and deployment of an Azure Function that interacts with Cosmos DB.
 
-Sumário
+Summary
 
-Gerenciamento de Variáveis de Ambiente
+Environment Variable Management
 
-Este projeto utiliza variáveis de ambiente para configurar as conexões com o Cosmos DB e o Storage Account. Essas variáveis podem ser configuradas tanto localmente quanto no ambiente do Azure.
+This project uses environment variables to configure connections to Cosmos DB and the Storage Account. These variables can be configured both locally and in the Azure environment.
 
-•	  Introdução
-•	  Pré-requisitos
-•	  Configuração do Projeto
-•	  Execução Local
-•	  Publicação no Azure
-•	  Gerenciamento de Variáveis de Ambiente
-•	  Recursos Adicionais
-•	  Contribuição
-•	  Licença
-Introdução
+• Introduction
+• Prerequisites
+• Project Setup
+• Local Execution
+• Azure Deployment
+• Environment Variable Management
+• Additional Resources
+• Contribution
+• License
 
-Este repositório é um exemplo básico para ajudar você a começar a desenvolver aplicativos Python que utilizam o Azure Cosmos DB com a API MongoDB. Ele inclui uma Azure Function que pode ser publicada no Azure e executada em um ambiente de consumo.
+Introduction
 
-Pré-requisitos
+This repository is a basic example to help you get started with developing Python applications that use Azure Cosmos DB with the MongoDB API. It includes an Azure Function that can be published to Azure and run in a consumption environment.
 
-Antes de começar, certifique-se de ter o seguinte:
+Prerequisites
 
-•	Azure CLI instalado e configurado.
-•	Conta Azure ativa.
-•	Python 3.11+ instalado.
-•	Azure Functions Core Tools instaladas.
-•	Git instalado.
-Configuração do Projeto
+Before you begin, make sure you have the following:
 
-1.	Clone este repositório:
-Recursos Adicionais
+• Azure CLI installed and configured.
+• Active Azure account.
+• Python 3.11+ installed.
+• Azure Functions Core Tools installed.
+• Git installed.
+
+Project Setup
+
+1. Clone this repository:
+Additional Resources
 
 git clone https://github.com/conradperes/azure-cosmos-db-mongodb-python-getting-started-main.git
 cd azure-cosmos-db-mongodb-python-getting-started-main
-Crie e ative um ambiente virtual:
 
-python3 -m venv venv source venv/bin/activate # No Windows use venv\Scripts\activate
+Create and activate a virtual environment:
 
-Instale as dependências do Python:
+python3 -m venv venv
+source venv/bin/activate # On Windows, use venv\Scripts\activate
 
-pip install -r requirements.txt
+Install Python dependencies:
 
-3.1 Rode o arquivo de setup para instalara o Resource Group, Storage Account, BLob storage e para subir o summary-2014.json para o blob storage e depois criar a conta de banco cosmos db e criar o banco e depois a collection:
+'''
+      sh setup-venv.sh
 
-sh setup.sh
-Defina as variáveis de ambiente:
+3.1 Run the setup file to install the Resource Group, Storage Account, Blob storage, upload the summary-2014.json to the blob storage, create the Cosmos DB account, create the database, and then create the collection:
 
-export AZURE_COSMOS_CONNECTION_STRING="sua-string-de-conexao-do-cosmos-db"
-export AZURE_STORAGE_CONNECTION_STRING="sua-string-de-conexao-do-storage-account"
-• Documentação do Azure Cosmos DB • Documentação do Azure Functions • Exemplo de API MongoDB no Cosmos DB
+'''
+      sh setup.sh
 
-Antes de fazer a execuçao local, por favor rode o Shell script para criar a funcao e deploya-la no azure functions:
+Set the environment variables in .env:
+
+'''
+      FUNCTION_APP_NAME="my-function-app-172394009"
+      RESOURCE_GROUP="myResourceGroup3"
+      STORAGE_ACCOUNT_NAME="mystorageaccountunique2"
+      REGION="brazilsouth"
+      NAME_COSMOSDB_ACCOUNT="conradcosmosdb"    
+      AZURE_STORAGE_CONNECTION_STRING=$(az storage account show-connection-string --name $STORAGE_ACCOUNT_NAME --resource-group $RESOURCE_GROUP --query connectionString --output tsv)
+      AZURE_COSMOS_CONNECTION_STRING=$(az cosmosdb keys list --name $NAME_COSMOSDB_ACCOUNT --resource-group $RESOURCE_GROUP --type connection-strings --query "connectionStrings[0].connectionString" -o tsv)
+      API_MANAGEMENT_NAME="apimanagementconrad"
+      API_NAME="myfunctionap"
+      FUNCTION_URL=https://$FUNCTION_APP_NAME.azurewebsites.net/api/myfunction
+      API_PATH=/myfunction
+
+
+
+• Azure Cosmos DB Documentation
+• Azure Functions Documentation
+• MongoDB API Example in Cosmos DB
+
+Before running locally, please run the Shell script to create the function and deploy it to Azure Functions:
 
 sh setup-functions.sh
-Assim o azure cli fara a criacao da function, e depois buildara e em seguida a implantacao. Para que possamos testar se esta tudo ok antes de gastar dinheiro sem necessidade na azure, testemos localmente, para tanto sigas os passos a frente:
 
-Execução Local
+This way, the Azure CLI will create the function, build it, and then deploy it. To test if everything is working correctly before spending unnecessary money on Azure, let's test it locally by following the steps below:
 
-Para executar o projeto localmente, siga os passos abaixo:
+Local Execution
 
-Inicie a Azure Function localmente:
+To run the project locally, follow the steps below:
 
- func start
-Teste a função a cessando o endpoint local gerado.
-Publicação no Azure
+Start the Azure Function locally:
 
-Crie um recurso de Function App no Azure:
-Essa prublicacao so se faz necessaria se tudo funcionar corretamente localmente. se sim, execute um comando parecido com esse :
+func start
 
- az functionapp create --resource-group $RESOURCE_GROUP --consumption-plan-location $REGION --runtime python --functions-version 4 --name $FUNCTION_APP_NAME --storage-account $STORAGE_ACCOUNT_NAME --os-type Linux
-Configure as variáveis de ambiente na Function App:
-As configuracaoes de variavel de ambiente ja estao no setup-functions.sh porem se algo mudar execute um comando baseado em :
+Test the function by accessing the locally generated endpoint.
 
-      az functionapp config appsettings set --name <Nome-da-Sua-Function-App> --resource-group <Seu-Resource-Group> --settings AZURE_COSMOS_CONNECTION_STRING=$AZURE_COSMOS_CONNECTION_STRING AZURE_STORAGE_CONNECTION_STRING=$AZURE_STORAGE_CONNECTION_STRING
-Publique a Azure Function: Se precisar mudar o codigo e republicar
+Azure Deployment
 
- func azure functionapp publish <Nome-da-Sua-Function-App>
-Gerenciamento de Variáveis de Ambiente
+Create a Function App resource in Azure:
+This deployment is only necessary if everything works correctly locally. If so, execute a command similar to this:
 
-Este projeto utiliza variáveis de ambiente para configurar as conexões com o Cosmos DB e o Storage Account. Essas variáveis podem ser configuradas tanto localmente quanto no ambiente do Azure.
+all the steps are in the same shell script file:
 
-Recursos Adicionais
+'''
+      sh setup-functions.sh
 
-• Documentação do Azure Cosmos DB • Documentação do Azure Functions • Exemplo de API MongoDB no Cosmos DB
 
-Contribuição
 
-Contribuições são bem-vindas! Sinta-se à vontade para abrir issues e pull requests.
+Publish the Azure Function: If you need to change the code and republish it.
 
-Licença
+func azure functionapp publish <Your-Function-App-Name>
 
-Este projeto está licenciado sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
+Environment Variable Management
+
+This project uses environment variables to configure connections to Cosmos DB and the Storage Account. These variables can be configured both locally and in the Azure environment.
+
+Additional Resources
+
+• Azure Cosmos DB Documentation
+• Azure Functions Documentation
+• MongoDB API Example in Cosmos DB
+
+Contribution
+
+Contributions are welcome! Feel free to open issues and pull requests.
+
+License
+
+This project is licensed under the MIT License. See the LICENSE file for more details.
