@@ -1,0 +1,12 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "AzureWebJobsFeatureFlags": "EnableWorkerIndexing",
+    "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;EndpointSuffix=core.windows.net;AccountName=mystorageaccountunique2;AccountKey=fb8PcmxeadomK0PZlOBfBsl53wkuW6hymwBk/e14ZyVAO+wqGjRbahrwgo9WSCj+lJC50aM6TfbW+ASttWyOFw==;BlobEndpoint=https://mystorageaccountunique2.blob.core.windows.net/;FileEndpoint=https://mystorageaccountunique2.file.core.windows.net/;QueueEndpoint=https://mystorageaccountunique2.queue.core.windows.net/;TableEndpoint=https://mystorageaccountunique2.table.core.windows.net/",
+    "AZURE_COSMOS_CONNECTION_STRING": "mongodb://conradcosmosdb:AT7DOHYSubqFy61yhWxZSSkeucW2pEqYvskgVekv2CUJOvQ4ncMeRThxFhwOmkRhxSHtHBqqQ3gTACDbNjebUA==@conradcosmosdb.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@conradcosmosdb@",
+    "AZURE_STORAGE_CONNECTION_STRING": "DefaultEndpointsProtocol=https;EndpointSuffix=core.windows.net;AccountName=mystorageaccountunique2;AccountKey=fb8PcmxeadomK0PZlOBfBsl53wkuW6hymwBk/e14ZyVAO+wqGjRbahrwgo9WSCj+lJC50aM6TfbW+ASttWyOFw==;BlobEndpoint=https://mystorageaccountunique2.blob.core.windows.net/;FileEndpoint=https://mystorageaccountunique2.file.core.windows.net/;QueueEndpoint=https://mystorageaccountunique2.queue.core.windows.net/;TableEndpoint=https://mystorageaccountunique2.table.core.windows.net/"
+
+
+  }
+}
